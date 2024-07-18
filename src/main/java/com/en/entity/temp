@@ -1,0 +1,90 @@
+
+        Box box = new Box(pos.getX()-testX, pos.getY()-testX, pos.getZ()-testX, pos.getX()+testX, pos.getY()+testX, pos.getZ()+testX );
+        List<ItemEntity> items = world.getEntitiesByClass(ItemEntity.class,box,EntityPredicates.VALID_ENTITY);
+        DefaultedList<ItemEntity> ignoredItemEntities = DefaultedList.ofSize(0);
+        Vec3d centerPos = new Vec3d(pos.getX(),pos.getY(),pos.getZ());
+        transferCooldown --;
+        if ( transferCooldown <= 0) {
+            for (ItemEntity itemEntity : items) {
+                if (blockEntity.getDetectedList().contains(itemEntity)) {
+                    blockEntity.removeFromDetectedList(itemEntity);
+                    itemEntity.setNoGravity(false);
+                }
+                blockEntity.addItem(blockEntity, itemEntity);
+                // tell vacuum hopper to pull item
+                if (!blockEntity.getDetectedList().contains(itemEntity)) {
+                    blockEntity.addToDetectedList(itemEntity);
+                }
+
+            }
+            transferCooldown = TRANSFER_COOLDOWN;
+        }
+
+    }
+
+
+
+    private void addItem (AttractBoxEntity blockentity,ItemEntity itemEntity){
+        ItemStack stack = itemEntity.getStack();
+        boolean removemk = false;
+
+        for (int i = 0; i < blockentity.size(); i++) {
+            ItemStack slotStack = blockentity.getStack(i);
+            if (slotStack.isEmpty()) {
+                itemEntity.remove(Entity.RemovalReason.DISCARDED);
+                setStack(i,stack);
+                return;
+            }
+            if(stack.getItem()== slotStack.getItem()){
+                if (slotStack.isStackable()){
+                    int count1 = stack.getCount();
+                    boolean removed = false;
+                    for (int a = 1;  a< count1; a++){
+                        if(slotStack.getCount()< slotStack.getMaxCount()){
+                            slotStack.setCount(slotStack.getCount()+1);
+                            stack.setCount(stack.getCount()-1);
+                            if(!removed){
+                                itemEntity.remove(Entity.RemovalReason.DISCARDED);
+                            }
+                        }
+                        else {
+                            if(!removed){
+                                itemEntity.remove(Entity.RemovalReason.DISCARDED);
+                            }
+                            removemk = true;
+                        }
+                    }
+                    if(!removemk){
+                        blockentity.setStack(i,slotStack);
+                        return;
+                    }
+                }
+            }
+
+
+
+
+
+        }
+        if(removemk){
+            ItemEntity itemEntity1 = new ItemEntity(this.world,this.getPos().getX(),this.getPos().getY(),this.getPos().getZ(),stack);
+            this.getWorld().spawnEntity(itemEntity1);
+        }
+    }
+    public void addToDetectedList(ItemEntity ie) {
+        if (!this.detectedList.contains(ie)) {
+            this.detectedList.add(ie);
+        }
+    }
+    public DefaultedList<ItemEntity> getDetectedList() {
+        return this.detectedList;
+    }
+    public void removeFromDetectedList(ItemEntity ie) {
+        this.detectedList.remove(ie);
+    }
+    private static Vec3d getCenterOfItemEntity(ItemEntity ie) {
+        float halfHeight = ie.getHeight() / 2;
+        Vec3d pos = ie.getPos();
+
+        return new Vec3d(pos.getX(), pos.getY() + halfHeight, pos.getZ());
+    }
